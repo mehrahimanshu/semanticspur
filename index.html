@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SemanticSpur | AI Schema.org Generator & Entity Extractor</title>
+  
+  <meta name="author" content="Himanshu Mehra">
+  <link rel="author" href="https://www.linkedin.com/in/mehrahimanshu/">
+
+  <!-- Schema.org WebApplication Markup -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "SemanticSpur",
+    "applicationCategory": "SEO Utility",
+    "operatingSystem": "All",
+    "description": "Transforms raw web content into validated Schema.org JSON-LD scripts and entity maps using Gemini.",
+    "author": {
+      "@type": "Person",
+      "name": "Himanshu Mehra",
+      "url": "https://www.linkedin.com/in/mehrahimanshu/",
+      "jobTitle": "Lead SEO & Technical Strategist"
+    }
+  }
+  </script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background-color: #0b0f19; }
+    .glass-card { background: #111827; border: 1px solid #1f2937; }
+    .code-bg { background-color: #030712; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0f19; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+    /* Lightweight Pure CSS Tooltips */
+    .tooltip-container {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .tooltip-box {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%) translateY(4px);
+      transition: all 0.15s ease-in-out;
+      pointer-events: none;
+      z-index: 50;
+      white-space: normal;
+      width: max-content;
+      max-width: 250px;
+    }
+    .tooltip-container:hover .tooltip-box {
+      visibility: visible;
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body class="text-slate-200 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+  <!-- Top Navigation Bar -->
+  <nav class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-40 px-6 py-2.5 flex items-center justify-between">
+    <!-- Brand Block with High-Impact SVG Logo -->
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-slate-900 to-indigo-950/80 border border-indigo-500/40 flex items-center justify-center p-2 shadow-lg shadow-indigo-600/25 flex-shrink-0">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-full filter drop-shadow-[0_0_6px_rgba(99,102,241,0.5)]">
+          <!-- Connecting Node Mesh -->
+          <path d="M10 30L20 20M20 20L30 10M20 20L30 30M20 20L10 10" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round" opacity="0.45"/>
+          <!-- Kinetic Letter S / Spur Backbone -->
+          <path d="M29 12C26.5 8 20 7.5 15.5 10C11 12.5 10 17 14 20L26 20C30 23 29 27.5 24.5 30C20 32.5 13.5 32 11 28" stroke="url(#spurGradLarge)" stroke-width="3.5" stroke-linecap="round"/>
+          <!-- Outer Knowledge Graph Vertices -->
+          <circle cx="10" cy="10" r="3" fill="#818CF8"/>
+          <circle cx="30" cy="10" r="3.5" fill="#A5B4FC"/>
+          <circle cx="20" cy="20" r="4" fill="#6366F1"/>
+          <circle cx="10" cy="30" r="3" fill="#818CF8"/>
+          <circle cx="30" cy="30" r="3" fill="#4F46E5"/>
+          <defs>
+            <linearGradient id="spurGradLarge" x1="10" y1="8" x2="30" y2="32" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#818CF8"/>
+              <stop offset="0.5" stop-color="#6366F1"/>
+              <stop offset="1" stop-color="#C084FC"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-black tracking-tight text-white text-xl sm:text-2xl">
+            Semantic<span class="text-indigo-400">Spur</span>
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 font-medium">AI Schema.org Generator & Entity Extractor</p>
+      </div>
+    </div>
+
+    <!-- API Key Status & Config Button -->
+    <div class="flex items-center gap-3">
+      <div id="keyStatusBadge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-amber-500/10 border border-amber-500/20 text-amber-400 font-medium">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+        <span id="keyStatusText">API Key Missing</span>
+      </div>
+      <button type="button" onclick="openKeyModal()" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-md font-medium text-slate-200 flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-key text-[11px]"></i> Configure Key
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 py-4 w-full flex-grow">
+    
+    <!-- 1. Hero Pitch Banner (Tightened Padding) -->
+    <div class="mb-3.5 px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div class="max-w-3xl">
+	  <div class="flex items-center gap-1.5 text-emerald-400 text-[10px] font-semibold uppercase tracking-wider mb-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          100% Free To Use
+        </div>
+        <h2 class="text-base sm:text-lg font-bold text-indigo-400 tracking-tight leading-snug">
+          Turn Raw Web Content into Validated Rich Snippets & Entity Maps
+        </h2>
+        <p class="text-slate-300 text-xs sm:text-sm mt-0.5 leading-relaxed">
+          Automatically generate production-ready Schema.org JSON-LD, extract core entities, and optimize direct answer snippets for Google AI Overviews and Perplexity.
+        </p>
+      </div>
+
+      <!-- Author Attribution Badge -->
+      <div class="flex-shrink-0 self-start md:self-center">
+        <a href="https://www.linkedin.com/in/mehrahimanshu/" target="_blank" rel="noreferrer" 
+          class="text-xs text-slate-300 hover:text-white bg-slate-800/90 hover:bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg font-medium inline-flex items-center gap-1.5 transition">
+          <span>Built by <strong class="text-indigo-400">Himanshu Mehra</strong></span>
+          <i class="fa-brands fa-linkedin text-indigo-400 text-sm"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- 2. Quick How-To-Use Guide (Compact Full Width) -->
+    <div class="mb-4 p-3 rounded-xl bg-slate-900/40 border border-slate-800/80">
+      <div class="flex items-center gap-1.5 mb-2">
+        <i class="fa-solid fa-compass text-indigo-400 text-xs"></i>
+        <h3 class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">How to Use SemanticSpur in 3 Steps</h3>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+        <!-- Step 1 -->
+        <div class="bg-slate-950/60 border border-slate-800/60 rounded-lg p-2.5 flex items-start gap-2.5">
+          <span class="w-6 h-6 rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
+          <div>
+            <h4 class="text-xs font-semibold text-slate-200">Connect Key</h4>
+            <p class="text-xs text-slate-300 mt-0.5 leading-snug">Click <strong class="text-slate-100">Configure Key</strong> to add your free Google AI Studio key (stored locally).</p>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="bg-slate-950/60 border border-slate-800/60 rounded-lg p-2.5 flex items-start gap-2.5">
+          <span class="w-6 h-6 rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
+          <div>
+            <h4 class="text-xs font-semibold text-slate-200">Input Content</h4>
+            <p class="text-xs text-slate-300 mt-0.5 leading-snug">Select a schema type, enter a URL, and paste text (or click <strong class="text-indigo-400">Load Sample Copy</strong>).</p>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="bg-slate-950/60 border border-slate-800/60 rounded-lg p-2.5 flex items-start gap-2.5">
+          <span class="w-6 h-6 rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
+          <div>
+            <h4 class="text-xs font-semibold text-slate-200">Synthesize & Validate</h4>
+            <p class="text-xs text-slate-300 mt-0.5 leading-snug">Generate JSON-LD script, review extracted entities & AEO scores, then validate directly.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Dual Workspace Grid (Left: Source Input | Right: Results & Output) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <!-- Left Column: Source Specifications -->
+      <section class="glass-card rounded-xl p-4 flex flex-col justify-between">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between pb-2.5 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded bg-indigo-950 border border-indigo-500/30 text-indigo-400 text-[11px] font-bold flex items-center justify-center">1</span>
+              <h2 class="text-xs sm:text-sm font-bold text-slate-200">Source Specifications</h2>
+            </div>
+            <button type="button" onclick="loadSampleCopy()" class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 py-0.5 px-2 rounded bg-indigo-500/10 hover:bg-indigo-500/20 transition">
+              <i class="fa-solid fa-arrow-down-to-bracket text-[10px]"></i> Load Sample Copy
+            </button>
+          </div>
+
+          <!-- Type Selector with Tooltip -->
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <div class="tooltip-container">
+                <label class="text-xs font-medium text-slate-300 cursor-help flex items-center gap-1">
+                  Target Schema.org Type <i class="fa-regular fa-circle-question text-[11px] text-slate-500"></i>
+                </label>
+                <div class="tooltip-box bg-slate-950 border border-slate-700 text-slate-300 text-xs p-2 rounded-md shadow-xl leading-relaxed">
+                  Defines the structured data vocabulary used by search engines to interpret page structure.
+                </div>
+              </div>
+              <span class="text-[11px] text-slate-500">Spec: Schema.org 26.0+</span>
+            </div>
+            <select id="schemaType" class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition">
+              <option value="FAQPage">FAQPage (Question & Direct Answer Graphs)</option>
+              <option value="Article">Article / Technical Blog (Entity-linked)</option>
+              <option value="Product">Product & Offer Specifications</option>
+              <option value="HowTo">HowTo (Step-by-Step Instructions)</option>
+              <option value="LocalBusiness">LocalBusiness (Geo & Contact Schema)</option>
+            </select>
+          </div>
+
+          <!-- URL with Tooltip -->
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <div class="tooltip-container">
+                <label class="text-xs font-medium text-slate-300 cursor-help flex items-center gap-1">
+                  Page URL <i class="fa-regular fa-circle-question text-[11px] text-slate-500"></i>
+                </label>
+                <div class="tooltip-box bg-slate-950 border border-slate-700 text-slate-300 text-xs p-2 rounded-md shadow-xl leading-relaxed">
+                  Injected into the JSON-LD "@id" and "url" properties to link exact Knowledge Graph nodes.
+                </div>
+              </div>
+              <span class="text-[11px] text-slate-500">Auto-injects @id and url</span>
+            </div>
+            <input type="url" id="pageUrl" placeholder="https://example.com/resources/technical-seo-geo-guide"
+              class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono transition">
+          </div>
+
+          <!-- Content Draft -->
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-xs font-medium text-slate-300">Content Draft or Specs</label>
+              <span id="charCount" class="text-[11px] text-slate-500 font-mono">0 chars</span>
+            </div>
+            <textarea id="pageContent" rows="8" placeholder="Paste your raw content draft, product bullet points, or FAQ text here..."
+              class="w-full bg-slate-900 border border-slate-700/80 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono leading-relaxed transition"></textarea>
+          </div>
+        </div>
+
+        <button id="synthesizeBtn" type="button" onclick="generateSchema()" class="mt-3 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2 text-xs sm:text-sm shadow-lg shadow-indigo-600/25 active:scale-[0.99]">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>Generate Schema & Entity Graph</span>
+        </button>
+      </section>
+
+      <!-- Right Column: Results & AEO Insights -->
+      <section class="glass-card rounded-xl p-4 flex flex-col justify-between">
+        <div>
+          <!-- Tab Navigation & Action Buttons -->
+          <div class="flex items-center justify-between pb-2.5 border-b border-slate-800 mb-2.5">
+            <div class="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+              <button id="tabJsonBtn" type="button" onclick="switchTab('json')" class="px-2.5 py-1 text-xs font-medium rounded-md bg-indigo-600 text-white flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-code text-[11px]"></i> JSON-LD Script
+              </button>
+              <button id="tabAeoBtn" type="button" onclick="switchTab('aeo')" class="px-2.5 py-1 text-xs font-medium rounded-md text-slate-400 hover:text-white flex items-center gap-1.5 transition relative">
+                <i class="fa-solid fa-chart-simple text-[11px]"></i> AEO & Entities
+                <span id="aeoNotificationDot" class="w-1.5 h-1.5 rounded-full bg-emerald-400 absolute top-1 right-1 hidden"></span>
+              </button>
+            </div>
+
+            <!-- Copy Tag Button + Dynamic Smart Test Button -->
+            <div class="flex items-center gap-1.5">
+              <button id="copyBtn" type="button" onclick="copyOutput()" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2.5 py-1 rounded text-slate-300 flex items-center gap-1.5 transition">
+                <i class="fa-regular fa-copy"></i> <span>Copy Tag</span>
+              </button>
+              
+              <a id="smartTestBtn" href="https://validator.schema.org/" target="_blank" rel="noreferrer" 
+                class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-indigo-500/50 px-2.5 py-1 rounded text-slate-200 flex items-center gap-1.5 transition">
+                <i id="testBtnIcon" class="fa-solid fa-code text-indigo-400"></i>
+                <span id="testBtnLabel" class="font-medium">Validate Schema.org</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-[9px] text-slate-500"></i>
+              </a>
+            </div>
+          </div>
+
+          <!-- Tab 1: Code View (Calibrated to 320px) -->
+          <div id="codeView">
+            <pre id="outputCode" class="w-full h-[320px] code-bg border border-slate-800/80 rounded-lg p-3 text-xs font-mono text-emerald-400 overflow-auto whitespace-pre leading-relaxed select-all">/* Click "Generate Schema & Entity Graph" to generate Schema.org JSON-LD */</pre>
+          </div>
+
+          <!-- Tab 2: AEO & Entity Insights View -->
+          <div id="aeoView" class="hidden h-[320px] code-bg border border-slate-800/80 rounded-lg p-4 overflow-auto text-xs space-y-4">
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <div class="tooltip-container">
+                  <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5 cursor-help">
+                    <i class="fa-solid fa-bullseye text-indigo-400"></i> Direct Answer Extraction Score
+                    <i class="fa-regular fa-circle-question text-[10px] text-slate-500"></i>
+                  </h3>
+                  <div class="tooltip-box !top-full !bottom-auto !mt-2 bg-slate-950 border border-slate-700 text-slate-300 text-xs p-2.5 rounded-md shadow-xl leading-relaxed">
+                    Evaluates if an LLM can parse a direct 30–40 word answer chunk from your text for AI Overviews.
+                  </div>
+                </div>
+                <span id="scoreNumberBadge" class="text-xs font-bold font-mono text-slate-300">--/100</span>
+              </div>
+              <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
+                <div id="aeoScoreBar" class="bg-indigo-500 h-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <p id="aeoScoreFeedback" class="text-slate-300 text-xs mt-1.5 leading-relaxed">Run synthesis to calculate score.</p>
+            </div>
+
+            <div>
+              <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <i class="fa-solid fa-diagram-project text-indigo-400"></i> Disambiguated Entities
+              </h3>
+              <ul id="entityList" class="space-y-1 text-slate-300 font-mono text-xs">
+                <li class="text-slate-500">// Extracted entities will populate here...</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <i class="fa-solid fa-lightbulb text-amber-400"></i> Information Gain Recommendations
+              </h3>
+              <p id="geoAdvice" class="text-slate-300 leading-relaxed text-xs bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                Actionable content advice will appear here to improve your citation chances in AI Overviews and Perplexity.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+          <span>Engine: <strong class="text-slate-300">Gemini 3.8 Flash</strong></span>
+          <span class="text-emerald-400 flex items-center gap-1.5 font-medium">
+            <i class="fa-solid fa-bolt text-indigo-400"></i> Free & Unlimited • <i class="fa-solid fa-shield-halved text-emerald-400 ml-1"></i> 100% Client-Side Processing
+          </span>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- App Footer -->
+  <footer class="border-t border-slate-800 bg-slate-950 px-6 py-2.5 text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2">
+    <p>&copy; 2026 SemanticSpur &bull; Developed by <strong class="text-slate-200">Himanshu Mehra</strong></p>
+    <div class="flex items-center gap-4">
+      <a href="https://www.linkedin.com/in/mehrahimanshu/" target="_blank" rel="noreferrer" class="hover:text-indigo-400 transition flex items-center gap-1">
+        <i class="fa-brands fa-linkedin text-sm"></i> LinkedIn
+      </a>
+      <span>&bull;</span>
+      <a href="https://github.com/mehrahimanshu/semanticspur" target="_blank" rel="noreferrer" class="hover:text-indigo-400 transition flex items-center gap-1">
+        <i class="fa-brands fa-github text-sm"></i> GitHub Source
+      </a>
+    </div>
+  </footer>
+
+  <!-- API Key Modal Popup -->
+  <div id="keyModal" style="display: none;" class="fixed inset-0 bg-black/80 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 max-w-md w-full rounded-xl p-5 shadow-2xl relative">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-key text-indigo-400"></i> Configure Google AI Studio Key
+        </h3>
+        <button type="button" onclick="closeKeyModal()" class="text-slate-400 hover:text-white text-sm p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-300 mb-3 leading-relaxed">
+        Get your free API key from <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" class="text-indigo-400 underline hover:text-indigo-300">Google AI Studio</a>. It is stored exclusively in your browser's <code class="text-indigo-300">localStorage</code>.
+      </p>
+
+      <div class="relative mb-4">
+        <input type="password" id="modalKeyInput" placeholder="Paste AIzaSy... API key"
+          class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-3 pr-10 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono">
+        <button type="button" onclick="toggleKeyVisibility()" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200 text-xs">
+          <i id="eyeIcon" class="fa-regular fa-eye"></i>
+        </button>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="closeKeyModal()" class="px-3 py-1.5 rounded-md text-xs text-slate-400 hover:text-white transition">Cancel</button>
+        <button type="button" onclick="saveApiKey()" class="bg-indigo-600 hover:bg-indigo-500 px-3.5 py-1.5 rounded-md text-xs font-semibold text-white transition shadow-md shadow-indigo-600/30">Save Key</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Character Counter
+    document.getElementById('pageContent').addEventListener('input', (e) => {
+      document.getElementById('charCount').innerText = `${e.target.value.length} chars`;
+    });
+
+    // Check Key on Page Load
+    function updateKeyBadge() {
+      const key = localStorage.getItem('gemini_api_key');
+      const badge = document.getElementById('keyStatusBadge');
+      const text = document.getElementById('keyStatusText');
+      if (key && key.trim().length > 0) {
+        badge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium";
+        text.innerText = "Key Configured";
+        badge.querySelector('span').className = "w-1.5 h-1.5 rounded-full bg-emerald-400";
+      } else {
+        badge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-amber-500/10 border border-amber-500/20 text-amber-400 font-medium";
+        text.innerText = "API Key Missing";
+        badge.querySelector('span').className = "w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse";
+      }
+    }
+    updateKeyBadge();
+
+    // Modal Control Functions
+    function openKeyModal() {
+      const modal = document.getElementById('keyModal');
+      const input = document.getElementById('modalKeyInput');
+      input.value = localStorage.getItem('gemini_api_key') || '';
+      modal.style.display = 'flex';
+    }
+
+    function closeKeyModal() {
+      const modal = document.getElementById('keyModal');
+      modal.style.display = 'none';
+    }
+
+    function toggleKeyVisibility() {
+      const input = document.getElementById('modalKeyInput');
+      const icon = document.getElementById('eyeIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fa-regular fa-eye-slash';
+      } else {
+        input.type = 'password';
+        icon.className = 'fa-regular fa-eye';
+      }
+    }
+
+    function saveApiKey() {
+      const key = document.getElementById('modalKeyInput').value.trim();
+      if (!key) {
+        alert('Please paste a valid Gemini API key.');
+        return;
+      }
+      localStorage.setItem('gemini_api_key', key);
+      updateKeyBadge();
+      closeKeyModal();
+    }
+
+    // Dynamic Single Test Button Logic
+    const richSnippetEligibleTypes = ['Product', 'Article', 'HowTo'];
+
+    function updateTestButton() {
+      const selectedType = document.getElementById('schemaType').value;
+      const testBtn = document.getElementById('smartTestBtn');
+      const testBtnLabel = document.getElementById('testBtnLabel');
+      const testBtnIcon = document.getElementById('testBtnIcon');
+
+      if (!testBtn) return;
+
+      if (richSnippetEligibleTypes.includes(selectedType)) {
+        testBtn.href = 'https://search.google.com/test/rich-results';
+        testBtnLabel.innerText = 'Test Rich Results (Google)';
+        testBtnIcon.className = 'fa-brands fa-google text-indigo-400';
+      } else {
+        testBtn.href = 'https://validator.schema.org/';
+        testBtnLabel.innerText = 'Validate Schema.org';
+        testBtnIcon.className = 'fa-solid fa-code text-indigo-400';
+      }
+    }
+
+    // Auto-copy script when user clicks the test button
+    const smartBtn = document.getElementById('smartTestBtn');
+    if (smartBtn) {
+      smartBtn.addEventListener('click', () => {
+        const text = document.getElementById('outputCode').innerText;
+        if (text && !text.includes('Click "Synthesize')) {
+          navigator.clipboard.writeText(text);
+        }
+      });
+    }
+
+    document.getElementById('schemaType').addEventListener('change', updateTestButton);
+    updateTestButton();
+
+    // Tabs Switcher
+    function switchTab(tab) {
+      const codeView = document.getElementById('codeView');
+      const aeoView = document.getElementById('aeoView');
+      const btnJson = document.getElementById('tabJsonBtn');
+      const btnAeo = document.getElementById('tabAeoBtn');
+      const notifDot = document.getElementById('aeoNotificationDot');
+
+      if (tab === 'json') {
+        codeView.classList.remove('hidden');
+        aeoView.classList.add('hidden');
+        btnJson.className = "px-2.5 py-1 text-xs font-medium rounded-md bg-indigo-600 text-white flex items-center gap-1.5 transition";
+        btnAeo.className = "px-2.5 py-1 text-xs font-medium rounded-md text-slate-400 hover:text-white flex items-center gap-1.5 transition relative";
+      } else {
+        codeView.classList.add('hidden');
+        aeoView.classList.remove('hidden');
+        notifDot.classList.add('hidden');
+        btnAeo.className = "px-2.5 py-1 text-xs font-medium rounded-md bg-indigo-600 text-white flex items-center gap-1.5 transition relative";
+        btnJson.className = "px-2.5 py-1 text-xs font-medium rounded-md text-slate-400 hover:text-white flex items-center gap-1.5 transition";
+      }
+    }
+
+    // Load Sample Copy
+    function loadSampleCopy() {
+      document.getElementById('pageUrl').value = "https://example.com/resources/technical-seo-geo-guide";
+      document.getElementById('schemaType').value = "FAQPage";
+      updateTestButton();
+      const sample = `Q: What is Generative Engine Optimization (GEO)?
+A: Generative Engine Optimization (GEO) is the practice of optimizing web architecture, authority signals, and content structure so generative AI engines (like Google AI Overviews, Perplexity, and Gemini) can easily extract, comprehend, and cite your content in answer responses.
+
+Q: How does JSON-LD Schema improve AI Overviews citations?
+A: Schema.org structured data directly feeds entity graphs to search crawlers. When paired with direct factual answers, it eliminates semantic ambiguity, allowing LLMs to match entity definitions accurately.
+
+Q: What is Information Gain in technical SEO?
+A: Information Gain measures the unique value, original research, and new data a piece of content offers compared to everything already indexed in the search engine's database.`;
+      
+      document.getElementById('pageContent').value = sample;
+      document.getElementById('charCount').innerText = `${sample.length} chars`;
+    }
+
+    // Copy to Clipboard with Feedback State
+    function copyOutput() {
+      const text = document.getElementById('outputCode').innerText;
+      const copyBtn = document.getElementById('copyBtn');
+      
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtn.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> <span class="text-emerald-400 font-semibold">Copied!</span>`;
+        copyBtn.classList.add('border-emerald-500/50', 'bg-emerald-500/10');
+        setTimeout(() => {
+          copyBtn.innerHTML = `<i class="fa-regular fa-copy"></i> <span>Copy Tag</span>`;
+          copyBtn.classList.remove('border-emerald-500/50', 'bg-emerald-500/10');
+        }, 2000);
+      });
+    }
+
+    // Synthesize Schema via Active Gemini Models
+    async function generateSchema() {
+      const apiKey = localStorage.getItem('gemini_api_key');
+      if (!apiKey) {
+        openKeyModal();
+        return;
+      }
+
+      const schemaType = document.getElementById('schemaType').value;
+      const url = document.getElementById('pageUrl').value.trim();
+      const content = document.getElementById('pageContent').value.trim();
+      const output = document.getElementById('outputCode');
+      const btn = document.getElementById('synthesizeBtn');
+
+      if (!content) {
+        alert("Please paste your page content or click 'Load Sample Copy'.");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Synthesizing Schema & Knowledge Graph...`;
+      output.innerText = `/* Synthesizing ${schemaType} JSON-LD with Gemini 3.8 Flash... */`;
+
+      const prompt = `
+You are a Lead Technical SEO & Generative Engine Optimization (GEO) Architect.
+Analyze the following webpage draft and generate both a validated Schema.org markup and an entity analysis.
+
+Target Schema Type: "${schemaType}"
+Canonical URL: "${url || 'https://example.com'}"
+
+Content:
+"""
+${content}
+"""
+
+Respond STRICTLY in this JSON structure:
+{
+  "jsonLdScript": "<script type=\\"application/ld+json\\">\\n{\\n...\\n}\\n<\\/script>",
+  "aeoScore": 88,
+  "aeoFeedback": "One sentence summary of answer readiness.",
+  "entities": [
+    "Entity 1 (Type: Concept/Tool)",
+    "Entity 2 (Type: Organization/Protocol)"
+  ],
+  "geoAdvice": "One concise paragraph recommending how to improve information gain and AI citations for this page."
+}
+`;
+
+      const payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json" }
+      };
+
+      const models = ['gemini-3.8-flash', 'gemini-3.5-flash-lite'];
+      let successfulData = null;
+      let lastErrorMessage = '';
+
+      for (const model of models) {
+        try {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await response.json();
+          if (!data.error) {
+            successfulData = data;
+            break;
+          } else {
+            lastErrorMessage = data.error.message;
+          }
+        } catch (err) {
+          lastErrorMessage = err.message;
+        }
+      }
+
+      if (successfulData) {
+        const rawResult = successfulData.candidates?.[0]?.content?.parts?.[0]?.text;
+        const parsed = JSON.parse(rawResult);
+
+        // Update Code View
+        output.innerText = parsed.jsonLdScript;
+
+        // Update AEO Insights View
+        document.getElementById('aeoScoreBar').style.width = `${parsed.aeoScore}%`;
+        document.getElementById('scoreNumberBadge').innerText = `${parsed.aeoScore}/100`;
+        document.getElementById('aeoScoreFeedback').innerText = parsed.aeoFeedback;
+        
+        const entityList = document.getElementById('entityList');
+        entityList.innerHTML = parsed.entities.map(e => `<li class="text-indigo-300"><i class="fa-solid fa-cube text-slate-500 mr-1.5"></i>${e}</li>`).join('');
+        
+        document.getElementById('geoAdvice').innerText = parsed.geoAdvice;
+
+        // Show notification dot on AEO tab
+        document.getElementById('aeoNotificationDot').classList.remove('hidden');
+      } else {
+        output.innerText = `/* API Error: ${lastErrorMessage} */`;
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Synthesize Schema & Entity Graph`;
+    }
+  </script>
+</body>
+</html>
